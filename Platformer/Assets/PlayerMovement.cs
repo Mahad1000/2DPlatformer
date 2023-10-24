@@ -3,65 +3,94 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
-{ 
+{
+    private Rigidbody2D rb;
+    private BoxCollider2D coll;
+    private SpriteRenderer sprite;
     private Animator anim;
 
-    private float horizontal;
-    private float speed = 8f;
-    private float jumpingPower = 16f;
-    private bool isFacingRight = true;
+    [SerializeField] private LayerMask jumpableGround;
 
-    [SerializeField] private Rigidbody2D rb;
-    [SerializeField] private Transform groundCheck;
-    [SerializeField] private LayerMask groundLayer;
+    private float horizontal = 0f; // Changed the variable name to match your code
+    [SerializeField] private float speed = 7f; // Changed the variable name to match your code
+    [SerializeField] private float jumpingPower = 14f; // Changed the variable name to match your code
 
-    void Start()
+    // Start is called before the first frame update
+    private void Start()
     {
+        rb = GetComponent<Rigidbody2D>();
+        coll = GetComponent<BoxCollider2D>();
+        sprite = GetComponent<SpriteRenderer>();
         anim = GetComponent<Animator>();
     }
 
-    void Update()
+    // Update is called once per frame
+    private void Update()
     {
         horizontal = Input.GetAxisRaw("Horizontal");
-        
+        rb.velocity = new Vector2(horizontal * speed, rb.velocity.y);
+
         if (Input.GetButtonDown("Jump") && IsGrounded())
         {
             rb.velocity = new Vector2(rb.velocity.x, jumpingPower);
         }
 
-        if (Input.GetButtonUp("Jump") && rb.velocity.y > 0f)
+        UpdateAnimationState();
+    }
+
+    private void UpdateAnimationState()
+{
+    MovementState state;
+
+    if (IsGrounded())
+    {
+        if (horizontal > 0f)
         {
-            rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * 0.5f);
+            state = MovementState.running;
+            sprite.flipX = false;
+        }
+        else if (horizontal < 0f)
+        {
+            state = MovementState.running;
+            sprite.flipX = true;
+        }
+        else
+        {
+            state = MovementState.idle;
+        }
+    }
+    else // Character is in the air
+    {
+        if (horizontal > 0f)
+        {
+            sprite.flipX = false; // Flip the sprite when moving to the right in the air
+        }
+        else if (horizontal < 0f)
+        {
+            sprite.flipX = true; // Flip the sprite when moving to the left in the air
         }
 
-        Flip();
-        PlayAnimation();
+        if (rb.velocity.y > 0.1f)
+        {
+            state = MovementState.jumping;
+        }
+        else
+        {
+            state = MovementState.falling;
+        }
     }
 
-    private void FixedUpdate()
-    {
-        rb.velocity = new Vector2(horizontal * speed, rb.velocity.y);
-    }
+    anim.SetInteger("state", (int)state);
+}
+
+
+
+
 
     private bool IsGrounded()
     {
-        return Physics2D.OverlapCircle(groundCheck.position, 0.2f, groundLayer);
+        return Physics2D.BoxCast(coll.bounds.center, coll.bounds.size, 0f, Vector2.down, 0.1f, jumpableGround);
     }
 
-    private void PlayAnimation()
-    {
-        bool isRunning = Mathf.Abs(horizontal) > 0f;
-        anim.SetBool("Running", isRunning);
-    }
-
-    private void Flip()
-    {
-        if (isFacingRight && horizontal < 0f || !isFacingRight && horizontal > 0f)
-        {
-            isFacingRight = !isFacingRight;
-            Vector3 localScale = transform.localScale;
-            localScale.x *= -1f;
-            transform.localScale = localScale;
-        }
-    }
+    private enum MovementState { idle, running, jumping, falling }
 }
