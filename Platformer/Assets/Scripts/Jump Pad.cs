@@ -4,26 +4,31 @@ using UnityEngine;
 
 public class BouncePad : MonoBehaviour
 {
-    private float bounce = 30f;
-    private Animator animator;
+    private float bounceForce = 30f;
+    private Animator anim;
+    [SerializeField] private AudioSource bounceSound;
 
     private void Start()
     {
-        // Get the Animator component on the Bounce Pad
-        animator = GetComponent<Animator>();
+       
+        anim = GetComponent<Animator>();
+
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Player"))
         {
-            
-            // Trigger the bounce animation
-            animator.SetTrigger("BounceTrigger");
 
             // Apply the bounce force to the player
-            collision.gameObject.GetComponent<Rigidbody2D>().AddForce(Vector2.up * bounce, ForceMode2D.Impulse);
+            Rigidbody2D playerRb = collision.gameObject.GetComponent<Rigidbody2D>();
+            playerRb.velocity = new Vector2(playerRb.velocity.x, 0f); // Reset vertical velocity
+            playerRb.AddForce(Vector2.up * bounceForce, ForceMode2D.Impulse);
+
+            // Play the bounce sound
+            bounceSound.Play();
+            anim.SetTrigger("JumpPad");
         }
     }
-    
+
 }
